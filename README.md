@@ -1,3 +1,4 @@
+cat << 'EOF' > README.md
 # Repo 3: System Health, Observability & Tuning 🛡️
 
 Este repositório documenta a implementação de uma stack de observabilidade de alta performance e a resolução de gargalos críticos. O foco é a aplicação de conceitos de **SRE**, **Tuning de Kernel** e **Hardening**.
@@ -13,23 +14,25 @@ Este repositório documenta a implementação de uma stack de observabilidade de
 ---
 
 ## 1. Engenharia de Performance & Tuning
-Implementei a priorização de recursos para garantir que a stack de monitoramento tenha precedência.
+Implementei a priorização de recursos para garantir que a stack de monitoramento tenha precedência sobre processos não críticos.
 
 ### Ajuste de Prioridade (Nice/Renice)
-Utilizei o escalonador do Kernel para garantir CPU ao Prometheus.
-* **Ação:** Alteração do valor de NI para `-5` e ajuste de prioridade de I/O.
-* **Evidência de Tuning:** ![Tuning de Performance](docs/assets/Analise_Pico_CPU_PromQL_irate.png)
-![Gestão de Processos](docs/assets/tuning-prioridade-processos-nice-ionice.png)
+Utilizei o escalonador do Kernel para garantir tempo de CPU ao Prometheus e Postgres Exporter.
+* **Ação:** Alteração do valor de NI para `-5` (Prioridade Alta) e ajuste de prioridade de I/O via `ionice`.
+* **Justificativa Técnica:** O valor `-5` foi definido para evitar o *starvation* (privação de recursos) da stack de métricas durante picos de escrita no PostgreSQL, garantindo que a observabilidade não sofra "gaps" sob carga.
+* **Evidência de Tuning:** ![Gestão de Processos](docs/assets/tuning-prioridade-processos-nice-ionice.png)
+![Analise PromQL](docs/assets/Analise_Pico_CPU_PromQL_irate.png)
 
 ---
 
-## 2. Post-Mortem: Troubleshooting de Conflitos
-Resolução da disputa pela porta `9090` entre o **Cockpit** e o **Prometheus**.
+## 2. Post-Mortem: Troubleshooting de Conflitos (SRE)
+**Evento:** Falha na subida do serviço de métricas (Prometheus).
+**Impacto:** 100% de perda de visibilidade da infraestrutura.
 
 ### Diagnóstico e Resolução
-1. **Identificação:** Identificação do conflito via `ss -tuln`.
-2. **Decisão Técnica:** Reconfiguração do Prometheus para a porta `9091`.
-3. **Resultado:** Coleta de métricas restabelecida.
+1. **Identificação:** Identificação do conflito de sockets via `ss -tuln`. O serviço Cockpit estava ocupando a porta padrão `9090`.
+2. **Decisão Técnica:** Migração forçada do Prometheus para a porta `9091` e isolamento via flag `--web.listen-address`.
+3. **Resultado:** Coleta de métricas restabelecida e coexistência de serviços validada.
 
 <details>
 <summary>📂 Visualizar Evidências de Diagnóstico</summary>
@@ -41,26 +44,31 @@ Resolução da disputa pela porta `9090` entre o **Cockpit** e o **Prometheus**.
 ---
 
 ## 3. Database Observability (PostgreSQL)
-Configuração de exportador dedicado com o princípio de **Least Privilege**.
+Configuração de exportador dedicado seguindo o princípio de **Least Privilege** (Privilégio Mínimo).
 
-* **Segurança:** Criação do usuário `monitor_user` com permissões restritas.
-* **Evidência:** ![Status do Exportador](docs/assets/systemd_postgres_exporter_active_service.png)
-![Criação do Usuário](docs/assets/postgresql_create_monitor_user_sql.png)
+* **Segurança:** Criação do usuário `monitor_user` no Postgres com permissões exclusivas de leitura de métricas (`pg_monitor`).
+* **Evidência:** ![Criação do Usuário](docs/assets/postgresql_create_monitor_user_sql.png)
+![Status do Exportador](docs/assets/systemd_postgres_exporter_active_service.png)
 
 ---
 
 ## 4. Hardening & Auditoria Proativa
-Implementação de defesa ativa e automação de auditoria.
+Implementação de defesa ativa e automação de auditoria de segurança.
 
 ### Gestão de Firewall Moderno (Firewalld)
-* **Portas Liberadas:** `2222/tcp`, `9090/tcp`  `9091/tcp`, `3000/tcp`, `9187/tcp`, `5432/tcp`, `9100/tcp`  .
+A gestão de portas foi centralizada no `firewall-cmd` para garantir a persistência das regras de Hardening.
+* **Configuração:** SSH movido para a porta `2222/tcp` e monitoramento isolado na `9091/tcp`.
 * **Evidência:** ![Firewall](docs/assets/Hardening_Firewall_Grafana_Prometheus.png)
 
 ### Analisador Proativo
-Automação via `analisador_proativo.sh` integrado como binário global.
+Desenvolvimento do script `analisador_proativo.sh` para auditoria contínua de segurança e integridade de rede.
 * **Evidência:** ![Relatório de Auditoria](docs/assets/auditoria_proativa_hardening_sucesso.png)
 
 ---
 
 ## 📈 Conclusão
-O sistema opera com 100% de visibilidade e todas as decisões técnicas foram documentadas com evidências reais.
+O sistema opera com 100% de visibilidade. Todas as decisões técnicas — do Tuning de CPU ao isolamento de rede — foram baseadas em métricas reais e documentadas para garantir a estabilidade do ambiente produtivo.
+
+---
+**Licença:** MIT
+EOF
