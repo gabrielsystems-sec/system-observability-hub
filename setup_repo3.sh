@@ -1,29 +1,44 @@
 #!/bin/bash
+# setup_repo3.sh - Automação de Observabilidade e Hardening
+# Foco: Resolução de conflitos de portas e Tuning de SRE
 
-# --- Configurações ---
-REPO_PATH="$HOME/system-observability-hub"
-ASSETS_PATH="$REPO_PATH/docs/assets"
-
-echo "🚀 Iniciando automação do Repo 3: System Health & Observability"
-
-# 1. Criando diretórios de documentação'
-if [ ! -d "$ASSETS_PATH" ]; then
-    mkdir -p "$ASSETS_PATH"
-    echo "✅ Diretórios docs/assets criados."
-else
-    echo "ℹ️  Diretórios já existem."
+# 1. Checagem de privilégio
+if [ "$EUID" -ne 0 ]; then 
+  echo "Erro: Execute como sudo."
+  exit 1
 fi
 
-# 2. Aplicando permissões de segurança (Hardening inicial)
-# Dono tem leitura/escrita, grupo e outros apenas leitura.
-chmod 744 "$REPO_PATH"
-chmod 644 "$REPO_PATH/README.md"
-echo "🔐 Permissões de hardening aplicadas aos arquivos de documentação."
+echo "--- Iniciando Configuração do Repo 3 ---"
 
-# 3. Status do Git
-cd "$REPO_PATH"
-git status
+# 2. Firewall - Gestão Moderno (Firewalld)
+# Portas: SSH(2222), Cockpit(9090), Node(9100), Grafana(3000), Prom(9091), Postgres(9187, 5432)
+echo "[+] Configurando portas no firewall..."
+for porta in 2222/tcp 9090/tcp 9100/tcp 3000/tcp 9091/tcp 9187/tcp 5432/tcp; do
+    firewall-cmd --permanent --add-port=$porta >/dev/null 2>&1
+done
+firewall-cmd --reload
+echo "[OK] Firewall atualizado."
 
-echo "---"
-echo "✅ Estrutura pronta para receber as evidências via SCP."
-echo "💡 Próximo passo: No Ubuntu, envie as fotos para $ASSETS_PATH"
+# 3. Analisador Proativo
+echo "[+] Instalando analisador de logs no sistema..."
+if [ -f "./analisador_proativo.sh" ]; then
+    chmod +x ./analisador_proativo.sh
+    ln -sf "$(pwd)/analisador_proativo.sh" /usr/local/bin/analisador-audit
+    echo "[OK] Comando 'analisador-audit' pronto."
+else
+    echo "[!] Aviso: analisador_proativo.sh não encontrado."
+fi
+
+# 4. Tuning de Performance (SRE)
+echo "[+] Ajustando prioridade do Prometheus (Nice -5)..."
+PID_PROM=$(pgrep prometheus)
+if [ ! -z "$PID_PROM" ]; then
+    renice -n -5 -p $PID_PROM
+    echo "[OK] Tuning aplicado no PID $PID_PROM."
+else
+    echo "[!] Prometheus offline, tuning ignorado."
+fi
+
+# 5. Estrutura do Repo
+mkdir -p docs/assets
+echo "--- Setup Finalizado ---"
