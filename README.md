@@ -53,7 +53,7 @@ Configuração de exportador dedicado com o princípio de **Least Privilege**.
 Implementação de defesa ativa e automação de auditoria.
 
 ### Gestão de Firewall Moderno (Firewalld)
-* **Portas Liberadas:** `2222/tcp`, `9091/tcp`, `3000/tcp`, `9187/tcp`.
+* **Portas Liberadas:** `2222/tcp`, `9090/tcp`  `9091/tcp`, `3000/tcp`, `9187/tcp`, `5432/tcp`, `9100/tcp`  .
 * **Evidência:** ![Firewall](docs/assets/Hardening_Firewall_Grafana_Prometheus.png)
 
 ### Analisador Proativo
