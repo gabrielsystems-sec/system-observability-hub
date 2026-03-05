@@ -1,0 +1,10 @@
+# Logs
+*.log
+
+# Arquivos temporários de editores
+*.swp
+*~
+.DS_Store
+
+# Binários e executáveis temporários
+*.tmp

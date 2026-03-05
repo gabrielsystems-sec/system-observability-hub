@@ -61,7 +61,7 @@ A gestão de portas foi centralizada no `firewall-cmd` para garantir a persistê
 * **Evidência:** ![Firewall](docs/assets/Hardening_Firewall_Grafana_Prometheus.png)
 
 ### Analisador Proativo
-Desenvolvimento do script `analisador_proativo.sh` para auditoria contínua de segurança e integridade de rede.
+Desenvolvimento do script `scripts/analisador_proativo.sh` para auditoria contínua de segurança e integridade de rede.
 * **Evidência:** ![Relatório de Auditoria](docs/assets/auditoria_proativa_hardening_sucesso.png)
 
 ---
