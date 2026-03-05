@@ -1,94 +1,68 @@
-# 🛡️ Repo 3: System Health, Observability & Tuning
+# Repo 3: System Health, Observability & Tuning
 
-> **Objetivo:** Implementação prática de monitoramento de sistema, análise de processos, gestão de logs e resolução de conflitos em ambiente Rocky Linux.
-
-Este repositório documenta a configuração de uma stack de observabilidade e as decisões técnicas tomadas para garantir o funcionamento dos serviços essenciais e da coleta de métricas de um banco de dados PostgreSQL.
+Este repositório documenta a implementação de uma stack de observabilidade de alta performance e a resolução de gargalos críticos em sistemas Linux (Ubuntu x86_64). O foco é a aplicação prática de conceitos de **SRE**, **Tuning de Kernel** e **Hardening**.
 
 ---
 
-## 1. Process Analysis & Tuning
-Ajuste de prioridade de processos para evitar gargalos de CPU na coleta de métricas. O Prometheus foi configurado com prioridade negativa no Kernel (`nice -5`).
+## 🛠️ Stack Tecnológica
+* **Monitoramento:** Prometheus & Node Exporter
+* **Visualização:** Grafana
+* **Database Health:** PostgreSQL & Postgres Exporter
+* **Auditoria:** Lynis & Scripting customizado (`analisador-audit`)
 
-![Tuning de Processos](./docs/assets/tuning-prioridade-processos-nice-ionice.png)
+---
+
+## 1. Engenharia de Performance & Tuning
+Implementei a priorização de recursos para garantir que a stack de monitoramento tenha precedência sobre processos não críticos.
+
+### Ajuste de Prioridade (Nice/Renice)
+Utilizei o escalonador do Kernel para garantir CPU ao Prometheus.
+* **Ação:** Alteração do valor de NI e ajuste de prioridade de I/O.
+* **Evidência de Tuning:** ![Tuning de Performance](Analise_Pico_CPU_PromQL_irate.png)
+![Gestão de Processos xargs e ionice](Uso_do_xargs_com_ionice_e_nice.png)
+
+---
+
+## 2. Post-Mortem: Troubleshooting de Conflitos
+Um dos maiores problemas enfrentados foi a disputa pela porta `9090`, utilizada pelo **Cockpit** e pelo **Prometheus**.
+
+### Diagnóstico e Resolução
+1. **Identificação:** O serviço do Prometheus falhava ao iniciar. Usei `ss -tuln` para identificar a ocupação da porta.
+2. **Decisão Técnica:** Reconfiguração do Prometheus para a porta `9091` e ajuste imediato nas regras de Firewall.
+3. **Resultado:** Coleta de métricas restabelecida sem desativar a gestão do sistema via Cockpit.
 
 <details>
-<summary>📂 <b>Ver Detalhes do Tuning e Monitoramento</b></summary>
+<summary>📂 Visualizar Evidências de Diagnóstico</summary>
 
-* **Comandos Utilizados:** `nice` e `renice` para ajuste de prioridade, `ionice` para disco.
-* **Monitoramento de Pico:** Análise de gargalos utilizando PromQL.
-* **Evidência Adicional:** ![Análise PromQL](./docs/assets/Analise_Pico_CPU_PromQL_irate.png)
+* **Conflito Detectado:** ![Erro Porta 9090](Diagnostico_Conflito_Porta_9090_Cockpit.png)
+* **Correção Aplicada:** ![Fix Prometheus](fix-prometheus-cockpit-conflict.png)
 </details>
 
 ---
 
-## 2. Log Management & Auditoria
-Criação de um script de auditoria proativa (`analisador_proativo.sh`) para monitorar logs do sistema, mascarar IPs e checar o status de portas críticas.
+## 3. Database Observability (PostgreSQL)
+Configuração de um exportador dedicado para métricas de banco de dados, utilizando o princípio de **Least Privilege**.
 
-![Execução do Analisador](./docs/assets/auditoria_proativa_hardening_sucesso.png)
-
-<details>
-<summary>📂 <b>Ver Evidências de Auditoria</b></summary>
-
-* **Ferramentas:** Uso de `grep`, `awk` e `sed` para extração de dados de `/var/log/secure`.
-* **Auditoria Adicional:** Validação de segurança do sistema utilizando o Lynis.
-* **Evidências:**
-    * [Detecção de Falhas](./docs/assets/automacao_auditoria_detecçao_falhas.png)
-    * [Relatório Lynis](./docs/assets/index69_auditoria_hardening_lynis.png)
-</details>
+* **Segurança:** Criação do usuário `monitor_user` com permissões restritas (RBAC).
+* **Correção de Conexão:** Resolução de erro de parse no `DATA_SOURCE_NAME` via variáveis de ambiente no Systemd.
+* **Evidência:** ![Status do Postgres Exporter](postgres_exporter_active_status.png)
+![Dashboard de Métricas](grafana_com_postgres_exporter.png)
 
 ---
 
-## 3. Modern Monitoring (Prometheus & Grafana)
-Configuração da stack de monitoramento para coletar e visualizar a saúde do PostgreSQL e dos recursos da máquina.
+## 4. Hardening & Auditoria Proativa
+Além do monitoramento passivo, implementei uma camada de defesa ativa.
 
-![Métricas PostgreSQL](./docs/assets/postgresql_metrics_exposed_browser.png)
+### Gestão de Firewall Moderno (Firewalld)
+Configuração rigorosa de zonas e portas.
+* **Portas Liberadas:** `2222/tcp` (SSH), `9091/tcp` (Prometheus), `3000/tcp` (Grafana), `9187/tcp` (Postgres Exporter).
 
-<details>
-<summary>📂 <b>Ver Configuração da Stack</b></summary>
-
-* **Banco de Dados:** Criação do usuário `monitor_user` para acesso seguro às métricas.
-* **Serviços:** Configuração do `postgres_exporter` rodando via `systemd`.
-* **Evidências:**
-    * [Configuração do Exporter no Prometheus](./docs/assets/prometheus_config_postgres_exporter.png)
-    * [Status do Serviço Systemd](./docs/assets/systemd_postgres_exporter_active_service.png)
-</details>
+### Analisador Proativo
+Desenvolvimento de um script de automação (`analisador_proativo.sh`) integrado como binário global em `/usr/local/bin/analisador-audit`.
+* **Evidência de Auditoria:** ![Relatório de Auditoria](Auditoria_Proativa_Analisador.png)
+![Resultado do Hardening](lynis_audit_system_result.png)
 
 ---
 
-## 4. Post-Mortem & Troubleshooting
-Documentação dos problemas enfrentados durante o laboratório e as soluções aplicadas.
-
-**Incidente Principal: Conflito de Portas (9090)**
-O Prometheus falhou ao iniciar pois a porta nativa (9090) já estava em uso pelo Cockpit.
-
-![Diagnóstico de Conflito](./docs/assets/troubleshooting_port_conflict_cockpit_vs_prometheus.png)
-
-<details>
-<summary>📂 <b>Ver Resolução e Outros Diagnósticos</b></summary>
-
-* **Solução do Conflito:** Reconfiguração do Prometheus para a porta 9091 e liberação no Firewalld.
-    * [Correção do Prometheus](./docs/assets/fix-prometheus-cockpit-conflict.png)
-* **Outros Erros Resolvidos:**
-    * Debug de extração de arquivos: [Erro com comando tar](./docs/assets/debug_file_not_found_tar_fix.png)
-</details>
-
----
-
-## 5. Setup Automatizado e Hardening
-Script `setup_repo3.sh` criado para padronizar a liberação de portas e permissões no ambiente.
-
-![Regras de Firewall](./docs/assets/Hardening_Firewall_Grafana_Prometheus.png)
-
-<details>
-<summary>📂 <b>Ver Configuração de Rede</b></summary>
-
-* **Gestão de Firewall Moderno (Firewalld):**
-    * Porta 2222 (SSH Customizado)
-    * Porta 9090 (Cockpit)
-    * Porta 9091 (Prometheus)
-    * Porta 3000 (Grafana)
-    * Porta 9100 (Node Exporter)
-    * Porta 9187 (Postgres Exporter)
-* **Gestão de Sessões:** Uso do `screen` para manter processos em background.
-    * [Uso do Screen](./docs/assets/gestao-de-sessoes-screen-e-background-jobs.png)
-</details>
+## 📈 Conclusão
+O sistema opera agora com 100% de visibilidade. Todas as falhas foram documentadas em logs e resolvidas com decisões técnicas fundamentadas, garantindo um ambiente resiliente e monitorado.
