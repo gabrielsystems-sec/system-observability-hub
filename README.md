@@ -1,7 +1,6 @@
-cat << 'EOF' > README.md
 # Repo 3: System Health, Observability & Tuning 🛡️
 
-Este repositório documenta a implementação de uma stack de observabilidade de alta performance e a resolução de gargalos críticos. O foco é a aplicação de conceitos de **SRE (Site Reliability Engineering)**, **Tuning de Kernel** e **Monitoramento Ativo**.
+Este repositório documenta a implementação de uma stack de observabilidade de alta performance e a resolução de gargalos críticos de infraestrutura. O foco é a aplicação prática de conceitos de **SRE (Site Reliability Engineering)**, **Tuning de Kernel** e **Monitoramento Ativo**.
 
 ---
 
@@ -13,73 +12,103 @@ Este repositório documenta a implementação de uma stack de observabilidade de
 
 ---
 
-## 1. Monitoramento de Performance & Recursos (Full View)
-Para garantir a estabilidade, implementei uma rotina de inspeção que correlaciona o consumo de hardware com a saúde dos serviços.
+## 📁 1. Monitoramento de Performance & Recursos (Full View)
 
-### 1.1. Visão Geral do Sistema (Performance)
-Análise em tempo real do Load Average e escalonamento de processos para evitar *starvation*.
-* **Evidência:** ![System Performance](docs/assets/system-performance-top-view.png)
+### Contexto do Problema
+Sistemas de larga escala sofrem degradação silenciosa por falta de correlação de métricas. Era necessário centralizar a visão de consumo de hardware (CPU Load Average) com a saúde dos daemons críticos de segurança.
 
-### 1.2. Gestão de Ativos e Capacidade de Armazenamento
-Auditoria combinada de Daemons ativos e disponibilidade de disco para prevenção de incidentes por falta de espaço (Disk Pressure).
-* **Serviços Monitorados:** Prometheus, Grafana, Auditd e Firewalld.
-* **Storage:** Monitoramento preventivo dos pontos de montagem `/` e `/storage_gab`.
-* **Evidência:** ![Serviços e Disco](docs/assets/services-and-storage-audit.png)
+### Troubleshooting e Resolução
+* **Ação Aplicada:** Agrupamento de auditoria de Daemons ativos (Prometheus, Grafana, Auditd e Firewalld) correlacionados com o espaço livre em disco dos pontos de montagem `/` e `/storage_gab` para prevenção de incidentes por *Disk Pressure*.
 
----
-
-## 2. Engenharia de Performance & Tuning
-Implementei a priorização de recursos para garantir que a stack de monitoramento tenha precedência sobre processos não críticos através do escalonador do Kernel.
-
-* **Ação:** Alteração do valor de NI (Nice) para `-5` (Prioridade Alta) e ajuste de I/O via `ionice`.
-* **Justificativa:** Garantir que a coleta de métricas não sofra "gaps" durante picos de escrita no banco de dados.
-* **Evidências:** ![Gestão de Processos](docs/assets/tuning-prioridade-processos-nice-ionice.png)
-  ![Analise PromQL](docs/assets/Analise_Pico_CPU_PromQL_irate.png)
-
----
-
-## 3. Post-Mortem: Troubleshooting de Conflitos (SRE)
-**Evento:** Falha crítica na inicialização do Prometheus (Porta 9090 ocupada).
-
-### Diagnóstico e Resolução
-1. **Identificação:** Conflito detectado via `ss -tuln` (Serviço Cockpit utilizando a porta padrão).
-2. **Decisão:** Migração do Prometheus para a porta `9091` via flag `--web.listen-address`.
-3. **Resultado:** Restabelecimento total da visibilidade da infraestrutura.
-
+### Evidência Técnica
 <details>
-<summary>📂 Visualizar Evidências de Diagnóstico</summary>
+  <summary>📂 Clique para ver a performance e auditoria do sistema</summary>
 
-* **Conflito Detectado:** ![Erro Porta 9090](docs/assets/Diagnostico_Conflito_Porta_9090_Cockpit.png)
-* **Correção Aplicada:** ![Fix Prometheus](docs/assets/fix-prometheus-cockpit-conflict.png)
+  * **System Performance (Top View):** ![System Performance](docs/assets/system-performance-top-view.png)
+  * **Serviços e Disco:** ![Serviços e Disco](docs/assets/services-and-storage-audit.png)
 </details>
 
 ---
 
-## 4. Database Observability (PostgreSQL)
-Configuração de exportador dedicado seguindo o princípio de **Least Privilege** (Privilégio Mínimo).
+## 📁 2. Engenharia de Performance & Tuning
 
-* **Segurança:** Criação do usuário `monitor_user` com permissões restritas à role `pg_monitor`.
-* **Evidências:** ![Criação do Usuário](docs/assets/postgresql_create_monitor_user_sql.png)
-  ![Status do Exportador](docs/assets/systemd_postgres_exporter_active_service.png)
+### Contexto do Problema
+Durante picos de escrita e concorrência no banco de dados PostgreSQL, a coleta de métricas do Prometheus sofria "gaps" (lacunas de dados) por contenção de CPU.
+
+### Troubleshooting e Resolução
+Priorização forçada de recursos de hardware para garantir a precedência da stack de monitoramento sobre processos não críticos do sistema operacional.
+* **Causa Raiz:** Escalonador padrão do Kernel Linux dando o mesmo peso para processos secundários e de observabilidade.
+* **Solução Aplicada:** Alteração do valor de NI (Nice) para `-5` (Prioridade Alta) e ajuste de I/O via `ionice` (Best-effort prioritário).
+
+### Evidência Técnica
+<details>
+  <summary>📂 Clique para ver o Tuning de Processos e Análise PromQL</summary>
+
+  * **Gestão de Processos (Nice/Ionice):** ![Gestão de Processos](docs/assets/tuning-prioridade-processos-nice-ionice.png)
+  * **Análise de Pico via PromQL (irate):** ![Analise PromQL](docs/assets/Analise_Pico_CPU_PromQL_irate.png)
+</details>
 
 ---
 
-## 5. Automação e Auditoria Proativa
-Desenvolvimento de ferramentas para garantir a conformidade contínua.
+## 📁 3. Post-Mortem: Troubleshooting de Conflitos (SRE)
 
-### 5.1. Firewall & Perímetro
-Centralização no `firewall-cmd` para persistência de regras de Hardening (Portas 2222 e 9091).
-* **Evidência:** ![Firewall](docs/assets/Hardening_Firewall_Grafana_Prometheus.png)
+### Contexto do Problema
+Falha crítica na inicialização do binário do Prometheus impedindo a subida do serviço no ambiente Linux.
 
-### 5.2. Script de Monitoramento Customizado
-Execução do `monitor_sistema.sh` para auditoria rápida de saúde e integridade do sistema.
-* **Evidência:** ![Relatório de Auditoria](docs/assets/monitor_sistema_sh.png)
+### Troubleshooting e Resolução (Hands-on SRE)
+1. **Identificação:** Erro de Socket Binding detectado via `ss -tuln` e `journalctl`. O serviço Cockpit do Linux estava utilizando a porta padrão `9090`.
+2. **Decisão:** Migração do Prometheus para a porta de escuta `9091` via flag de runtime `--web.listen-address`.
+3. **Resultado:** Restabelecimento total da visibilidade da infraestrutura sem colidir com serviços nativos do host.
+
+### Evidência Técnica
+<details>
+  <summary>📂 Clique para ver o Diagnóstico e Correção de Conflito de Porta</summary>
+
+  * **Conflito Detectado (Porta 9090):** ![Erro Porta 9090](docs/assets/Diagnostico_Conflito_Porta_9090_Cockpit.png)
+  * **Correção Aplicada (Porta 9091):** ![Fix Prometheus](docs/assets/fix-prometheus-cockpit-conflict.png)
+</details>
+
+---
+
+## 📁 4. Database Observability (PostgreSQL)
+
+### Contexto do Problema
+Necessidade de expor métricas internas do PostgreSQL sem violar políticas de segurança corporativa ou expor dados sensíveis de tabelas de produção.
+
+### Troubleshooting e Resolução
+* **Solução Aplicada:** Configuração do exportador dedicado seguindo o princípio de **Least Privilege** (Privilégio Mínimo). Criação do usuário isolado `monitor_user` atrelado estritamente à role nativa `pg_monitor`.
+
+### Evidência Técnica
+<details>
+  <summary>📂 Clique para ver a criação do usuário e status do exportador</summary>
+
+  * **Criação do Usuário no SQL:** ![Criação do Usuário](docs/assets/postgresql_create_monitor_user_sql.png)
+  * **Status do Systemd (Active):** ![Status do Exportador](docs/assets/systemd_postgres_exporter_active_service.png)
+</details>
+
+---
+
+## 📁 5. Automação e Auditoria Proativa (Security Hardening)
+
+### Contexto do Problema
+Garantir que as regras de firewall persistam a reinicializações e manter um relatório diário de integridade sem intervenção manual do operador.
+
+### Troubleshooting e Resolução
+* **Solução Firewall:** Centralização no `firewall-cmd` para persistência de regras de Hardening bloqueando acessos externos e liberando apenas as portas de monitoramento (2222 e 9091).
+* **Solução Scripting:** Desenvolvimento do bash `monitor_sistema.sh` acoplado ao `crontab` para dump de logs estruturados de saúde.
+
+### Evidência Técnica
+<details>
+  <summary>📂 Clique para ver o Firewall e Logs de Auditoria</summary>
+
+  * **Hardening de Firewall:** ![Firewall](docs/assets/Hardening_Firewall_Grafana_Prometheus.png)
+  * **Saída do Script Customizado:** ![Relatório de Auditoria](docs/assets/monitor_sistema_sh.png)
+</details>
 
 ---
 
 ## 📈 Conclusão
-O ambiente opera com 100% de visibilidade. Todas as decisões técnicas — do isolamento de portas ao tuning de prioridade de CPU — visam a alta disponibilidade e a integridade dos dados coletados para o time de SOC.
+O ambiente opera com 100% de visibilidade. Todas as decisões técnicas — do isolamento de portas ao tuning de prioridade de CPU via Kernel — visam a alta disponibilidade e a integridade dos dados coletados para o time de SOC.
 
 ---
 **Licença:** MIT
-EOF
