@@ -1,10 +1,10 @@
-# Repo 3: System Health, Observability & Tuning 🛡️
+# System Health, Observability & Tuning 🛡️
 
 Este repositório documenta a implementação de uma stack de observabilidade de alta performance e a resolução de gargalos críticos de infraestrutura. O foco é a aplicação prática de conceitos de **SRE (Site Reliability Engineering)**, **Tuning de Kernel** e **Monitoramento Ativo**.
 
 ---
 
-## 🛠️ Stack Tecnológica
+## Stack Tecnológica
 * **Monitoramento:** Prometheus & Node Exporter
 * **Visualização:** Grafana
 * **Database Health:** PostgreSQL & Postgres Exporter
@@ -70,20 +70,22 @@ Falha crítica na inicialização do binário do Prometheus impedindo a subida d
 
 ---
 
-## 📁 4. Database Observability (PostgreSQL)
+## 📁 4. Database Observability & Disaster Recovery (PostgreSQL)
 
 ### Contexto do Problema
-Necessidade de expor métricas internas do PostgreSQL sem violar políticas de segurança corporativa ou expor dados sensíveis de tabelas de produção.
+Necessidade de expor métricas internas sem expor dados sensíveis e garantir uma estratégia de recuperação rápida em caso de corrupção lógica de dados.
 
 ### Troubleshooting e Resolução
-* **Solução Aplicada:** Configuração do exportador dedicado seguindo o princípio de **Least Privilege** (Privilégio Mínimo). Criação do usuário isolado `monitor_user` atrelado estritamente à role nativa `pg_monitor`.
+* **Monitoramento:** Configuração do exportador dedicado seguindo o princípio de **Least Privilege** via role `pg_monitor`.
+* **Resiliência:** Implementação de rotina de **Backup Lógico (Dump)** para garantir o RPO (Recovery Point Objective) e validação da integridade do arquivo.
 
 ### Evidência Técnica
 <details>
-  <summary>📂 Clique para ver a criação do usuário e status do exportador</summary>
+  <summary>📂 Clique para ver a criação do usuário e estratégia de backup</summary>
 
   * **Criação do Usuário no SQL:** ![Criação do Usuário](docs/assets/postgresql_create_monitor_user_sql.png)
   * **Status do Systemd (Active):** ![Status do Exportador](docs/assets/systemd_postgres_exporter_active_service.png)
+  * **Disaster Recovery (Backup Lógico):** ![Database Backup](docs/assets/07_disaster_recovery_backup_logico.png)
 </details>
 
 ---
@@ -108,7 +110,7 @@ Garantir que as regras de firewall persistam a reinicializações e manter um re
 ---
 
 ## 📈 Conclusão
-O ambiente opera com 100% de visibilidade. Todas as decisões técnicas — do isolamento de portas ao tuning de prioridade de CPU via Kernel — visam a alta disponibilidade e a integridade dos dados coletados para o time de SOC.
+A estratégia de observabilidade foi integrada a **Planos de Recuperação de Desastres (DRP)**. Isso garante que métricas de performance e backups lógicos caminhem juntos, reduzindo o **MTTR (Mean Time To Repair)** e protegendo a integridade dos dados contra falhas críticas.
 
 ---
 **Licença:** MIT
