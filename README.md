@@ -34,7 +34,7 @@ Sistemas de larga escala sofrem degradação silenciosa. Era necessário central
 <details>
   <summary>📂 Clique para ver a Performance em Tempo Real</summary>
 
-  * **Full Stack View (Glances):** ![Realtime Glances](./docs/assets/monitoramento_realtime_glances.jpg)
+  * **Full Stack View (Glances):** ![Realtime Glances](./docs/assets/monitoramento_realtime_glances.png)
   * **System Performance (Top):** ![Top View](./docs/assets/system-performance-top-view.png)
   * **Serviços e Storage Audit:** ![Services Audit](./docs/assets/services-and-storage-audit.png)
 </details>
@@ -112,7 +112,7 @@ Criação da role dedicada `monitor` com permissão limitada de leitura de métr
 
   * **Criação da Role SQL:** ![Postgres User](./docs/assets/postgresql_create_monitor_user_sql.png)
   * **Exporter Active:** ![Systemd Exporter](./docs/assets/systemd_postgres_exporter_active_service.png)
-  * **Métricas Expostas:** ![Metrics Browser](./docs/assets/postgresql_metrics_exposed_browser.jpg)
+  * **Métricas Expostas:** ![Metrics Browser](./docs/assets/postgresql_metrics_exposed_browser.png)
 </details>
 
 ---
