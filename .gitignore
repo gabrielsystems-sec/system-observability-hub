@@ -1,10 +1,26 @@
-# Logs
-*.log
+.aider*
 
-# Arquivos temporários de editores
+# Arquivos do Vim (Swap files)
 *.swp
-*~
-.DS_Store
+*.swo
 
-# Binários e executáveis temporários
+# Arquivos de sistema (Linux/Ubuntu)
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Logs e arquivos temporários de compilação
+*.log
 *.tmp
+*.bak
+*.cache
+
+# Pastas de ambiente virtual ou binários (se houver)
+venv/
+__pycache__/
+*.pyc
+
+# Arquivos sensíveis (Regra de ouro: NUNCA suba senhas ou chaves)
+*.pem
+*.key
+.env
